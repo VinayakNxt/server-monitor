@@ -1,71 +1,4 @@
 /**
- * Scheduled cleanup task
- */
-async function scheduledCleanup() {
-    try {
-      logger.info(`Running scheduled cleanup of metrics older than ${CLEANUP_DAYS_TO_KEEP} days`);
-      const result = await cleanupOldMetrics();
-      if (result) {
-        logger.info('Cleanup completed successfully');
-      } else {
-        logger.warn('Cleanup may not have completed successfully');
-      }
-    } catch (error) {
-      logger.error('Error during scheduled cleanup:', error);
-    }
-    
-    // Schedule next cleanup
-    setTimeout(scheduledCleanup, CLEANUP_INTERVAL);
-  }
-  
-  /**
-   * Initialize the application
-   */
-  async function initialize() {
-    logger.info('Starting Server Monitor');
-    logger.info(`Server ID: ${SERVER_ID}`);
-    logger.info(`Refresh interval: ${formatter.formatDuration(REFRESH_INTERVAL)}`);
-    
-    // Initialize database if needed
-    if (process.env.DB_ENABLED === 'true') {
-      logger.info('Initializing database connection');
-      db.initializeDatabase();
-    }
-    
-    // Start monitoring
-    monitor();
-    
-    // Start cleanup scheduler
-    if (process.env.DB_ENABLED === 'true') {
-      logger.info(`Scheduling regular cleanup every 24 hours (keeping ${CLEANUP_DAYS_TO_KEEP} days of data)`);
-      setTimeout(scheduledCleanup, 60000); // First cleanup after 1 minute
-    }
-  }
-  
-  /**
-   * Cleanup function for graceful shutdown
-   */
-  async function cleanup() {
-    logger.info('Shutting down...');
-    
-    // Flush any remaining metrics
-    await flushMetrics();
-    
-    // Close database connection
-    if (process.env.DB_ENABLED === 'true') {
-      await db.closeDatabase();
-    }
-    
-    logger.info('Cleanup complete, exiting');
-    process.exit(0);
-  }
-  
-  // Handle termination signals
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
-  
-  // Start the application
-  initialize();/**
    * Server Monitor - Main Application
    */
   require('dotenv').config();
@@ -149,3 +82,72 @@ async function scheduledCleanup() {
     console.log('\n=====================================');
     console.log(`Next update in ${formatter.formatDuration(REFRESH_INTERVAL)}`);
   }
+
+/**
+ * Scheduled cleanup task
+ */
+async function scheduledCleanup() {
+    try {
+      logger.info(`Running scheduled cleanup of metrics older than ${CLEANUP_DAYS_TO_KEEP} days`);
+      const result = await cleanupOldMetrics();
+      if (result) {
+        logger.info('Cleanup completed successfully');
+      } else {
+        logger.warn('Cleanup may not have completed successfully');
+      }
+    } catch (error) {
+      logger.error('Error during scheduled cleanup:', error);
+    }
+    
+    // Schedule next cleanup
+    setTimeout(scheduledCleanup, CLEANUP_INTERVAL);
+  }
+  
+  /**
+   * Initialize the application
+   */
+  async function initialize() {
+    logger.info('Starting Server Monitor');
+    logger.info(`Server ID: ${SERVER_ID}`);
+    logger.info(`Refresh interval: ${formatter.formatDuration(REFRESH_INTERVAL)}`);
+    
+    // Initialize database if needed
+    if (process.env.DB_ENABLED === 'true') {
+      logger.info('Initializing database connection');
+      db.initializeDatabase();
+    }
+    
+    // Start monitoring
+    monitor();
+    
+    // Start cleanup scheduler
+    if (process.env.DB_ENABLED === 'true') {
+      logger.info(`Scheduling regular cleanup every 24 hours (keeping ${CLEANUP_DAYS_TO_KEEP} days of data)`);
+      setTimeout(scheduledCleanup, 60000); // First cleanup after 1 minute
+    }
+  }
+  
+  /**
+   * Cleanup function for graceful shutdown
+   */
+  async function cleanup() {
+    logger.info('Shutting down...');
+    
+    // Flush any remaining metrics
+    await flushMetrics();
+    
+    // Close database connection
+    if (process.env.DB_ENABLED === 'true') {
+      await db.closeDatabase();
+    }
+    
+    logger.info('Cleanup complete, exiting');
+    process.exit(0);
+  }
+  
+  // Handle termination signals
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+  
+  // Start the application
+  initialize();
