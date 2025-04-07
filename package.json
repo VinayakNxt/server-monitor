@@ -1,0 +1,21 @@
+{
+  "name": "server-monitor",
+  "version": "1.0.0",
+  "description": "Server metrics collection system with PostgreSQL RDS storage",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "setup-db": "node scripts/setup-db.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "winston": "^3.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
