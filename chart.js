@@ -1,6 +1,6 @@
 %%{init: {'theme': 'default'}}%%
 flowchart TD
-    subgraph "Agent Servers [Multiple Servers]"
+    subgraph "Agent Servers "
         A1[Server 1 Agent]
         A2[Server 2 Agent]
         A3[Server 3 Agent]
@@ -17,7 +17,7 @@ flowchart TD
     subgraph "Analysis Server [Single Server]"
         API[Scheduled API Endpoint]
         OpenAI[OpenAI API]
-        HTMLGen[HTML Report Generator]
+        HTMLGen[PDF Report Generator]
         Mailer[Email Service]
     end
 
