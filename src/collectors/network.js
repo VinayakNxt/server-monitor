@@ -15,6 +15,7 @@ let prevNetStats = { rx: 0, tx: 0, timestamp: Date.now() };
 
 /**
  * Gets network statistics
+ * @returns {Promise<{rx: number, tx: number, interface: string}>} Network statistics including received and transmitted bytes
  */
 async function getNetworkInfo() {
   try {
@@ -29,6 +30,7 @@ async function getNetworkInfo() {
     if (process.platform === 'linux') {
       // Linux implementation
       try {
+        // Read received and transmitted bytes from sysfs
         const rxData = await fs.readFile(`/sys/class/net/${mainIface}/statistics/rx_bytes`, 'utf8');
         const txData = await fs.readFile(`/sys/class/net/${mainIface}/statistics/tx_bytes`, 'utf8');
         
@@ -71,7 +73,6 @@ async function getNetworkInfo() {
       const lines = stdout.trim().split('\n');
       
       // Parse the bytes received/sent
-      // Windows output format varies, this is a simplification
       let rx = 0;
       let tx = 0;
       
@@ -100,6 +101,7 @@ async function getNetworkInfo() {
 
 /**
  * Gets active network connections count
+ * @returns {Promise<number>} Number of active connections in ESTABLISHED state
  */
 async function getConnectionsCount() {
   try {
@@ -118,6 +120,7 @@ async function getConnectionsCount() {
 
 /**
  * Gets TCP connection states count
+ * @returns {Promise<Object>} Object containing counts of various TCP connection states
  */
 async function getTcpStates() {
   try {
@@ -146,6 +149,8 @@ async function getTcpStates() {
 
 /**
  * Calculates network transfer rates
+ * @param {Object} current - Current network statistics
+ * @returns {Object} Network transfer rates and formatted rates
  */
 function calculateNetworkRates(current) {
   const now = Date.now();
@@ -172,12 +177,9 @@ function calculateNetworkRates(current) {
   };
 }
 
-module.exports = {
-  collectNetworkMetrics
-};
-
 /**
  * Collects network metrics
+ * @returns {Promise<Object>} Network metrics including rates, connection states, and formatted values
  */
 async function collectNetworkMetrics() {
   try {
@@ -226,3 +228,7 @@ async function collectNetworkMetrics() {
     };
   }
 }
+
+module.exports = {
+  collectNetworkMetrics
+};

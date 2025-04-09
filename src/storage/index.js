@@ -1,5 +1,7 @@
 /**
  * Storage module
+ * Handles storing metrics using different storage methods (API or PostgreSQL).
+ * Includes functionality for batching, cleanup, and flushing metrics.
  */
 const logger = require('../utils/logger');
 const postgresqlStorage = require('./postgresql');
@@ -9,7 +11,11 @@ const apiStorage = require('./api');
 let metricsBuffer = [];
 
 /**
- * Store metrics using configured storage method
+ * Store metrics using the configured storage method.
+ * Adds metrics to a buffer and processes the buffer when it reaches a threshold.
+ * 
+ * @param {Object} metrics - The metrics data to store.
+ * @returns {Promise<boolean>} - Returns true if metrics are successfully stored or buffered.
  */
 async function storeMetrics(metrics) {
   if (!metrics) {
@@ -17,10 +23,10 @@ async function storeMetrics(metrics) {
     return false;
   }
   
-  // Add to buffer
+  // Add metrics to the buffer
   metricsBuffer.push(metrics);
   
-  // Process buffer if it reaches threshold
+  // Process the buffer if it reaches the configured batch size
   const batchSize = parseInt(process.env.BATCH_SIZE) || 5;
   if (metricsBuffer.length >= batchSize) {
     return await processMetricsBatch();
@@ -30,25 +36,28 @@ async function storeMetrics(metrics) {
 }
 
 /**
- * Process metrics batch
+ * Process the metrics batch.
+ * Sends the buffered metrics to the configured storage method in FIFO order.
+ * 
+ * @returns {Promise<boolean>} - Returns true if all metrics in the batch are successfully processed.
  */
 async function processMetricsBatch() {
-  if (metricsBuffer.length === 0) return true;
+  if (metricsBuffer.length === 0) return true; // No metrics to process
   
   logger.info(`Processing batch of ${metricsBuffer.length} metrics`);
   
-  // Process metrics in FIFO order
+  // Copy the buffer and reset it
   const batchToProcess = [...metricsBuffer];
   metricsBuffer = [];
   
   let success = true;
   
-  // Sequential processing to avoid connection issues
+  // Process each metric sequentially to avoid connection issues
   for (const metrics of batchToProcess) {
     try {
       let result = false;
       
-      // Store using configured storage method
+      // Store metrics using the configured storage method
       if (process.env.API_ENABLED === 'true') {
         result = await apiStorage.storeMetrics(metrics);
       } else if (process.env.DB_ENABLED === 'true') {
@@ -60,7 +69,7 @@ async function processMetricsBatch() {
       
       if (!result) {
         success = false;
-        // Log but continue with other metrics
+        // Log the failure but continue processing other metrics
         logger.error(`Failed to store metrics for ${metrics.timestamp}`);
       }
     } catch (error) {
@@ -73,7 +82,10 @@ async function processMetricsBatch() {
 }
 
 /**
- * Clean up old metrics
+ * Clean up old metrics from storage.
+ * Only applicable for database storage.
+ * 
+ * @returns {Promise<boolean>} - Returns true if cleanup is successful.
  */
 async function cleanupOldMetrics() {
   if (process.env.DB_ENABLED === 'true') {
@@ -85,7 +97,10 @@ async function cleanupOldMetrics() {
 }
 
 /**
- * Flush any remaining metrics in buffer (for shutdown)
+ * Flush any remaining metrics in the buffer.
+ * Typically called during application shutdown to ensure no metrics are lost.
+ * 
+ * @returns {Promise<boolean>} - Returns true if the buffer is successfully flushed.
  */
 async function flushMetrics() {
   return await processMetricsBatch();

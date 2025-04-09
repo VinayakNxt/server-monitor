@@ -6,6 +6,8 @@ const logger = require('../utils/logger');
 
 /**
  * Store metrics in PostgreSQL database
+ * @param {Object} metrics - The metrics data to store
+ * @returns {boolean} - Returns true if metrics are stored successfully, otherwise false
  */
 async function storeMetrics(metrics) {
   if (!metrics) {
@@ -22,7 +24,7 @@ async function storeMetrics(metrics) {
   const client = await pool.connect();
   
   try {
-    await client.query('BEGIN');
+    await client.query('BEGIN'); // Start a database transaction
     
     // Insert or update server record
     const serverQuery = `
@@ -59,7 +61,7 @@ async function storeMetrics(metrics) {
     
     const metricsResult = await client.query(metricsQuery, [
       metrics.server.hostname,
-      new Date(metrics.timestamp),
+      new Date(metrics.timestamp), // Convert timestamp to Date object
       metrics.cpu.usage,
       metrics.cpu.cores,
       metrics.cpu.model,
@@ -81,12 +83,12 @@ async function storeMetrics(metrics) {
       metrics.network.tx_bytes,
       metrics.network.rx_rate,
       metrics.network.tx_rate,
-      metrics.network.connections?.ESTABLISHED || 0
+      metrics.network.connections?.ESTABLISHED || 0 // Default to 0 if undefined
     ]);
     
-    const metricId = metricsResult.rows[0].id;
+    const metricId = metricsResult.rows[0].id; // Get the ID of the inserted metrics record
     
-    // Insert processes
+    // Insert processes if available
     if (metrics.processes?.topCpuProcesses?.length > 0) {
       for (const process of metrics.processes.topCpuProcesses) {
         await client.query(`
@@ -101,20 +103,22 @@ async function storeMetrics(metrics) {
       }
     }
     
-    await client.query('COMMIT');
+    await client.query('COMMIT'); // Commit the transaction
     logger.debug('Metrics stored successfully in PostgreSQL');
     return true;
   } catch (error) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK'); // Rollback the transaction on error
     logger.error('Error storing metrics in PostgreSQL database:', error);
     return false;
   } finally {
-    client.release();
+    client.release(); // Release the database client
   }
 }
 
 /**
  * Clean up old metrics data
+ * @param {number} daysToKeep - Number of days to retain metrics data
+ * @returns {boolean} - Returns true if cleanup is successful, otherwise false
  */
 async function cleanupOldMetrics(daysToKeep = 30) {
   const pool = db.getPool();
@@ -124,8 +128,9 @@ async function cleanupOldMetrics(daysToKeep = 30) {
   }
   
   try {
+    // Call the database function to clean up old metrics
     const result = await pool.query('SELECT cleanup_old_metrics($1)', [daysToKeep]);
-    const deletedCount = result.rows[0].cleanup_old_metrics;
+    const deletedCount = result.rows[0].cleanup_old_metrics; // Get the count of deleted records
     
     logger.info(`Cleaned up ${deletedCount} old metrics older than ${daysToKeep} days`);
     return true;
