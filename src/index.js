@@ -14,8 +14,28 @@
   const DISPLAY_METRICS = process.env.DISPLAY_METRICS === 'true';
   const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
   const CLEANUP_DAYS_TO_KEEP = parseInt(process.env.CLEANUP_DAYS_TO_KEEP) || 30;
-  const SERVER_ID = process.env.SERVER_ID || os.hostname();
+  const SERVER_IP = getServerIpAddress();
+  const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || os.hostname();
+  const SERVER_ID = `${SERVER_HOSTNAME}@${SERVER_IP}`;
   
+
+  // Get server IP address
+  async function getServerIpAddress() {
+    const networkInterfaces = os.networkInterfaces();
+    
+    // Find the first non-internal IPv4 address
+    for (const interfaceName in networkInterfaces) {
+      const interfaces = networkInterfaces[interfaceName];
+      
+      for (const iface of interfaces) {
+        // Skip internal and non-IPv4 addresses
+        if (!iface.internal && iface.family === 'IPv4') {
+          return iface.address;
+        }
+      }
+    }
+    return '';
+  }
   /**
    * Main monitoring function
    */
@@ -25,7 +45,10 @@
       
       // Collect all metrics
       const metrics = await collectAllMetrics();
-      
+
+      // Add IP address to server info if not already included
+      metrics.server.hostname = SERVER_IP;
+
       // Store metrics
       await storeMetrics(metrics);
       
