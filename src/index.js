@@ -14,10 +14,6 @@
   const DISPLAY_METRICS = process.env.DISPLAY_METRICS === 'true';
   const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
   const CLEANUP_DAYS_TO_KEEP = parseInt(process.env.CLEANUP_DAYS_TO_KEEP) || 30;
-  const SERVER_IP = getServerIpAddress();
-  const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || os.hostname();
-  const SERVER_ID = `${SERVER_HOSTNAME}@${SERVER_IP}`;
-  
 
   // Get server IP address
   async function getServerIpAddress() {
@@ -30,6 +26,7 @@
       for (const iface of interfaces) {
         // Skip internal and non-IPv4 addresses
         if (!iface.internal && iface.family === 'IPv4') {
+          logger.info(`Using IP address ${iface.address} for server ID`);
           return iface.address;
         }
       }
@@ -47,7 +44,7 @@
       const metrics = await collectAllMetrics();
 
       // Add IP address to server info if not already included
-      metrics.server.hostname = SERVER_IP;
+      metrics.server.hostname = await getServerIpAddress() || metrics.server.hostname;
 
       // Store metrics
       await storeMetrics(metrics);
@@ -130,6 +127,9 @@ async function scheduledCleanup() {
    * Initialize the application
    */
   async function initialize() {
+    const SERVER_IP = await getServerIpAddress();
+    const SERVER_HOSTNAME = process.env.SERVER_HOSTNAME || os.hostname();
+    const SERVER_ID = SERVER_IP || SERVER_HOSTNAME;
     logger.info('Starting Server Monitor');
     logger.info(`Server ID: ${SERVER_ID}`);
     logger.info(`Refresh interval: ${formatter.formatDuration(REFRESH_INTERVAL)}`);
